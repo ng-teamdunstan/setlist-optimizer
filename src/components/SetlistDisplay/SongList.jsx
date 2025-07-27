@@ -103,7 +103,7 @@ function SongList({ songs, onGenerateSetlist }) {
       <div style={{ display: 'grid', gap: '12px' }}>
         {songs.map((song, index) => {
           // Berechne korrekte Energy-Anzeige
-          const displayEnergy = song.spotifyData ? calculateSpotifyEnergyScore(song) : song.energy
+          const displayEnergy = song.energy // Direkt verwenden, da bereits berechnet
           
           return (
             <div 

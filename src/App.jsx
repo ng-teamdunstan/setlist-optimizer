@@ -21,20 +21,22 @@ function App() {
   }
 
   const handleSpotifySongsSelect = (spotifyTracks) => {
-    // Konvertiere Spotify Tracks zu unserem Song Format
-    const convertedSongs = spotifyTracks.map(track => ({
-      id: track.id,
-      title: track.name,
-      duration: track.duration,
-      energy: track.energy,
-      // Spotify-spezifische Daten für bessere Setlist-Generierung
-      spotifyData: {
-        popularity: track.popularity,
-        audioFeatures: track.audioFeatures,
-        album: track.album,
-        artists: track.artists
-      }
-    }))
+  console.log('📥 Received tracks from AlbumBrowser:', spotifyTracks)
+  
+  // Konvertiere Spotify Tracks zu unserem Song Format
+  const convertedSongs = spotifyTracks.map(track => ({
+    id: track.id,
+    title: track.name,
+    duration: track.duration,
+    energy: track.energy, // Bereits berechnet in AlbumBrowser
+    // Spotify-spezifische Daten beibehalten
+    spotifyData: track.spotifyData
+  }))
+  
+  console.log('✅ Converted songs for app:', convertedSongs)
+  setSongs(convertedSongs)
+  setSetlistData(null)
+}
     
     setSongs(convertedSongs)
     setSetlistData(null)

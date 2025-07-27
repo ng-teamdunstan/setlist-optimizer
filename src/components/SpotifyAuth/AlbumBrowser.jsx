@@ -85,37 +85,93 @@ function AlbumBrowser({ selectedArtist, onSongsSelect }) {
     }
   }
 
-  const handleCreateSetlist = async () => {
-    if (selectedTracks.length === 0) return
+  // In AlbumBrowser.jsx - ersetze die handleCreateSetlist Funktion:
+
+const handleCreateSetlist = async () => {
+  if (selectedTracks.length === 0) return
+  
+  try {
+    console.log('🎵 Starting to load audio features for tracks:', selectedTracks.length)
     
-    try {
-      // Audio Features für alle ausgewählten Tracks laden
-      const spotifyAPI = new SpotifyAPI(accessToken)
-      const trackIds = selectedTracks.map(track => track.id)
-      const audioFeaturesData = await spotifyAPI.getAudioFeatures(trackIds)
+    // Audio Features für alle ausgewählten Tracks laden
+    const spotifyAPI = new SpotifyAPI(accessToken)
+    const trackIds = selectedTracks.map(track => track.id)
+    
+    console.log('🔍 Track IDs:', trackIds)
+    
+    const audioFeaturesData = await spotifyAPI.getAudioFeatures(trackIds)
+    console.log('🎛️ Audio Features Response:', audioFeaturesData)
+    
+    // Tracks mit Audio Features kombinieren
+    const tracksWithFeatures = selectedTracks.map((track, index) => {
+      const audioFeatures = audioFeaturesData.audio_features[index]
       
-      // Tracks mit Audio Features kombinieren
-      const tracksWithFeatures = selectedTracks.map((track, index) => ({
+      console.log(`🎵 Track "${track.name}":`, {
+        audioFeatures,
+        energy: audioFeatures?.energy,
+        danceability: audioFeatures?.danceability,
+        tempo: audioFeatures?.tempo
+      })
+      
+      // Basis Energy-Berechnung direkt hier
+      let calculatedEnergy = 5 // Fallback
+      
+      if (audioFeatures && audioFeatures.energy !== null) {
+        // Spotify Energy (0-1) zu unserer Skala (1-10)
+        const energy = audioFeatures.energy || 0.5
+        const danceability = audioFeatures.danceability || 0.5
+        const tempo = audioFeatures.tempo || 120
+        
+        // Vereinfachte Berechnung
+        let score = 0
+        score += energy * 50        // Energy 50%
+        score += danceability * 30  // Danceability 30%
+        score += Math.min(tempo / 140, 1) * 20  // Tempo 20%
+        
+        calculatedEnergy = Math.min(Math.max(Math.round(score / 10), 1), 10)
+        
+        console.log(`✅ Calculated energy for "${track.name}": ${calculatedEnergy}/10 (from ${energy} energy, ${danceability} dance, ${tempo} BPM)`)
+      }
+      
+      return {
         ...track,
-        audioFeatures: audioFeaturesData.audio_features[index],
+        audioFeatures: audioFeatures,
         // Konvertiere für unseren Setlist Generator
         duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
-        energy: audioFeaturesData.audio_features[index]?.energy ? Math.round(audioFeaturesData.audio_features[index].energy * 10) : 5
-      }))
-      
-      onSongsSelect(tracksWithFeatures)
-      console.log('Selected tracks with audio features:', tracksWithFeatures)
-    } catch (error) {
-      console.error('Error loading audio features:', error)
-      // Fallback ohne Audio Features
-      const tracksWithoutFeatures = selectedTracks.map(track => ({
-        ...track,
-        duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
-        energy: 5 // Default energy
-      }))
-      onSongsSelect(tracksWithoutFeatures)
-    }
+        energy: calculatedEnergy, // DIREKT als berechneter Wert
+        // Spotify-spezifische Daten
+        spotifyData: {
+          popularity: track.popularity,
+          audioFeatures: audioFeatures,
+          album: track.album,
+          artists: track.artists
+        }
+      }
+    })
+    
+    console.log('🎯 Final tracks with features:', tracksWithFeatures)
+    onSongsSelect(tracksWithFeatures)
+    
+  } catch (error) {
+    console.error('❌ Error loading audio features:', error)
+    
+    // Fallback ohne Audio Features
+    const tracksWithoutFeatures = selectedTracks.map(track => ({
+      ...track,
+      duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
+      energy: 5, // Default energy
+      spotifyData: {
+        popularity: track.popularity,
+        audioFeatures: null,
+        album: track.album,
+        artists: track.artists
+      }
+    }))
+    
+    console.log('📝 Using fallback tracks:', tracksWithoutFeatures)
+    onSongsSelect(tracksWithoutFeatures)
   }
+}
 
   if (loading) {
     return (
