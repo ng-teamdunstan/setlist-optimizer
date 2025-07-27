@@ -5,6 +5,7 @@ import SongList from './components/SetlistDisplay/SongList'
 import SetlistResult from './components/SetlistDisplay/SetlistResult'
 import SpotifyLogin from './components/SpotifyAuth/SpotifyLogin'
 import ArtistSearch from './components/SpotifyAuth/ArtistSearch'
+import AlbumBrowser from './components/SpotifyAuth/AlbumBrowser'
 import { generateOptimalSetlist } from './utils/setlistGenerator'
 import { useSpotifyAuth } from './hooks/useSpotifyAuth'
 
@@ -17,6 +18,27 @@ function App() {
   const handleSongAdd = (newSong) => {
     setSongs([...songs, newSong])
     setSetlistData(null)
+  }
+
+  const handleSpotifySongsSelect = (spotifyTracks) => {
+    // Konvertiere Spotify Tracks zu unserem Song Format
+    const convertedSongs = spotifyTracks.map(track => ({
+      id: track.id,
+      title: track.name,
+      duration: track.duration,
+      energy: track.energy,
+      // Spotify-spezifische Daten für bessere Setlist-Generierung
+      spotifyData: {
+        popularity: track.popularity,
+        audioFeatures: track.audioFeatures,
+        album: track.album,
+        artists: track.artists
+      }
+    }))
+    
+    setSongs(convertedSongs)
+    setSetlistData(null)
+    console.log('Songs from Spotify:', convertedSongs)
   }
 
   const handleGenerateSetlist = () => {
@@ -80,7 +102,7 @@ function App() {
           <ArtistSearch onArtistSelect={handleArtistSelect} />
         )}
         
-        {isAuthenticated && selectedArtist && (
+        {isAuthenticated && selectedArtist && songs.length === 0 && (
           <>
             {/* Selected Artist Info */}
             <div style={{
@@ -128,7 +150,79 @@ function App() {
               </button>
             </div>
 
-            <SongInput onSongAdd={handleSongAdd} />
+            <AlbumBrowser 
+              selectedArtist={selectedArtist} 
+              onSongsSelect={handleSpotifySongsSelect}
+            />
+          </>
+        )}
+        
+        {isAuthenticated && selectedArtist && songs.length > 0 && (
+          <>
+            {/* Selected Artist Info mit Songs */}
+            <div style={{
+              background: '#1a1a1a',
+              border: '1px solid #2a2a2a',
+              borderRadius: '12px',
+              padding: '24px',
+              marginBottom: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              {selectedArtist.images?.[2] && (
+                <img
+                  src={selectedArtist.images[2].url}
+                  alt={selectedArtist.name}
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%'
+                  }}
+                />
+              )}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ color: '#ffffff', margin: '0 0 4px 0' }}>
+                  {selectedArtist.name}
+                </h3>
+                <p style={{ color: '#b0b0b0', margin: 0, fontSize: '14px' }}>
+                  {songs.length} Songs ausgewählt für Setlist
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSongs([])
+                  setSetlistData(null)
+                }}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #3a3a3a',
+                  color: '#b0b0b0',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  marginRight: '8px'
+                }}
+              >
+                Andere Songs
+              </button>
+              <button
+                onClick={() => setSelectedArtist(null)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #3a3a3a',
+                  color: '#b0b0b0',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Anderen Artist
+              </button>
+            </div>
+
             <SongList songs={songs} onGenerateSetlist={handleGenerateSetlist} />
             {setlistData && <SetlistResult setlistData={setlistData} />}
           </>
