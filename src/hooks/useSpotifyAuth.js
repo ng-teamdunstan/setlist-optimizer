@@ -20,12 +20,14 @@ const getRedirectUri = () => {
   
   const REDIRECT_URI = getRedirectUri()
   
-  const SCOPES = [
-    'user-read-private',
-    'user-read-email',
-    'user-library-read',
-    'user-top-read'
-  ].join(' ')
+const SCOPES = [
+  'user-read-private',
+  'user-read-email', 
+  'user-library-read',
+  'user-top-read',
+  'user-read-recently-played',  // Neu hinzufügen
+  'streaming'                   // Neu hinzufügen - für Audio Features
+].join(' ')
 
   const generateCodeVerifier = () => {
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
