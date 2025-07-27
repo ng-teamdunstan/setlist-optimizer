@@ -85,94 +85,145 @@ function AlbumBrowser({ selectedArtist, onSongsSelect }) {
     }
   }
 
-  // In AlbumBrowser.jsx - ersetze die handleCreateSetlist Funktion:
-
-const handleCreateSetlist = async () => {
-  if (selectedTracks.length === 0) return
-  
-  try {
-    console.log('🎵 Starting to load audio features for tracks:', selectedTracks.length)
+  // VERBESSERTE handleCreateSetlist Funktion mit detailliertem Debug
+  const handleCreateSetlist = async () => {
+    if (selectedTracks.length === 0) return
     
-    // Audio Features für alle ausgewählten Tracks laden
-    const spotifyAPI = new SpotifyAPI(accessToken)
-    const trackIds = selectedTracks.map(track => track.id)
+    console.log('🚀 === STARTING SETLIST CREATION ===')
+    console.log('📝 Selected tracks:', selectedTracks.length)
     
-    console.log('🔍 Track IDs:', trackIds)
-    
-    const audioFeaturesData = await spotifyAPI.getAudioFeatures(trackIds)
-    console.log('🎛️ Audio Features Response:', audioFeaturesData)
-    
-    // Tracks mit Audio Features kombinieren
-    const tracksWithFeatures = selectedTracks.map((track, index) => {
-      const audioFeatures = audioFeaturesData.audio_features[index]
+    try {
+      // Audio Features für alle ausgewählten Tracks laden
+      const spotifyAPI = new SpotifyAPI(accessToken)
+      const trackIds = selectedTracks.map(track => track.id)
       
-      console.log(`🎵 Track "${track.name}":`, {
-        audioFeatures,
-        energy: audioFeatures?.energy,
-        danceability: audioFeatures?.danceability,
-        tempo: audioFeatures?.tempo
-      })
+      console.log('🎵 Track IDs to fetch:', trackIds)
       
-      // Basis Energy-Berechnung direkt hier
-      let calculatedEnergy = 5 // Fallback
+      const audioFeaturesData = await spotifyAPI.getAudioFeatures(trackIds)
+      console.log('🎛️ Raw Audio Features Response:', audioFeaturesData)
       
-      if (audioFeatures && audioFeatures.energy !== null) {
-        // Spotify Energy (0-1) zu unserer Skala (1-10)
-        const energy = audioFeatures.energy || 0.5
-        const danceability = audioFeatures.danceability || 0.5
-        const tempo = audioFeatures.tempo || 120
-        
-        // Vereinfachte Berechnung
-        let score = 0
-        score += energy * 50        // Energy 50%
-        score += danceability * 30  // Danceability 30%
-        score += Math.min(tempo / 140, 1) * 20  // Tempo 20%
-        
-        calculatedEnergy = Math.min(Math.max(Math.round(score / 10), 1), 10)
-        
-        console.log(`✅ Calculated energy for "${track.name}": ${calculatedEnergy}/10 (from ${energy} energy, ${danceability} dance, ${tempo} BPM)`)
+      if (!audioFeaturesData || !audioFeaturesData.audio_features) {
+        console.error('❌ No audio features in response!')
+        throw new Error('No audio features returned')
       }
       
-      return {
+      // Tracks mit Audio Features kombinieren
+      const tracksWithFeatures = selectedTracks.map((track, index) => {
+        const audioFeatures = audioFeaturesData.audio_features[index]
+        
+        console.log(`\n🎵 Processing Track #${index + 1}: "${track.name}"`)
+        console.log('📊 Raw Audio Features:', audioFeatures)
+        
+        if (!audioFeatures) {
+          console.warn(`⚠️ No audio features for track: ${track.name}`)
+          return {
+            ...track,
+            duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
+            energy: 5, // Fallback
+            spotifyData: {
+              popularity: track.popularity,
+              audioFeatures: null,
+              album: track.album,
+              artists: track.artists
+            }
+          }
+        }
+        
+        // DETAILLIERTE Energy-Berechnung mit Logging
+        const spotifyEnergy = audioFeatures.energy || 0.5
+        const danceability = audioFeatures.danceability || 0.5
+        const tempo = audioFeatures.tempo || 120
+        const valence = audioFeatures.valence || 0.5
+        const loudness = audioFeatures.loudness || -10
+        
+        console.log(`📈 Audio Values:`, {
+          energy: spotifyEnergy,
+          danceability: danceability,
+          tempo: tempo,
+          valence: valence,
+          loudness: loudness
+        })
+        
+        // Berechnungsformel Schritt für Schritt
+        let energyScore = 0
+        
+        // Energy (40% Gewichtung)
+        const energyContrib = spotifyEnergy * 4
+        energyScore += energyContrib
+        console.log(`⚡ Energy contribution: ${spotifyEnergy} * 4 = ${energyContrib}`)
+        
+        // Danceability (30% Gewichtung)
+        const danceContrib = danceability * 3
+        energyScore += danceContrib
+        console.log(`💃 Dance contribution: ${danceability} * 3 = ${danceContrib}`)
+        
+        // Tempo (20% Gewichtung)
+        const tempoNormalized = Math.min(tempo / 140, 1)
+        const tempoContrib = tempoNormalized * 2
+        energyScore += tempoContrib
+        console.log(`🥁 Tempo contribution: ${tempo} BPM -> ${tempoNormalized} * 2 = ${tempoContrib}`)
+        
+        // Valence (10% Gewichtung)
+        const valenceContrib = valence * 1
+        energyScore += valenceContrib
+        console.log(`😊 Valence contribution: ${valence} * 1 = ${valenceContrib}`)
+        
+        console.log(`🧮 Total score before rounding: ${energyScore}`)
+        
+        // Finale Energy auf 1-10 Skala
+        const finalEnergy = Math.min(Math.max(Math.round(energyScore), 1), 10)
+        console.log(`🎯 Final Energy: ${finalEnergy}/10`)
+        
+        const result = {
+          ...track,
+          duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
+          energy: finalEnergy, // WICHTIG: Direkt als finale Energy
+          spotifyData: {
+            popularity: track.popularity,
+            audioFeatures: audioFeatures,
+            album: track.album,
+            artists: track.artists
+          }
+        }
+        
+        console.log(`✅ Final track data:`, {
+          name: result.name,
+          energy: result.energy,
+          duration: result.duration
+        })
+        
+        return result
+      })
+      
+      console.log('\n🎉 === FINAL TRACKS WITH ENERGY ===')
+      tracksWithFeatures.forEach((track, i) => {
+        console.log(`${i + 1}. "${track.name}" - Energy: ${track.energy}/10`)
+      })
+      
+      onSongsSelect(tracksWithFeatures)
+      
+    } catch (error) {
+      console.error('❌ Error in handleCreateSetlist:', error)
+      
+      // Fallback ohne Audio Features
+      const fallbackTracks = selectedTracks.map(track => ({
         ...track,
-        audioFeatures: audioFeatures,
-        // Konvertiere für unseren Setlist Generator
         duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
-        energy: calculatedEnergy, // DIREKT als berechneter Wert
-        // Spotify-spezifische Daten
+        energy: 5, // Default energy
         spotifyData: {
           popularity: track.popularity,
-          audioFeatures: audioFeatures,
+          audioFeatures: null,
           album: track.album,
           artists: track.artists
         }
-      }
-    })
-    
-    console.log('🎯 Final tracks with features:', tracksWithFeatures)
-    onSongsSelect(tracksWithFeatures)
-    
-  } catch (error) {
-    console.error('❌ Error loading audio features:', error)
-    
-    // Fallback ohne Audio Features
-    const tracksWithoutFeatures = selectedTracks.map(track => ({
-      ...track,
-      duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
-      energy: 5, // Default energy
-      spotifyData: {
-        popularity: track.popularity,
-        audioFeatures: null,
-        album: track.album,
-        artists: track.artists
-      }
-    }))
-    
-    console.log('📝 Using fallback tracks:', tracksWithoutFeatures)
-    onSongsSelect(tracksWithoutFeatures)
+      }))
+      
+      console.log('📝 Using fallback tracks (all energy = 5)')
+      onSongsSelect(fallbackTracks)
+    }
   }
-}
 
+  // Rest der Komponente bleibt gleich...
   if (loading) {
     return (
       <div style={{
