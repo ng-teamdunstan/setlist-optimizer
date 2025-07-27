@@ -7,14 +7,13 @@ export const useSpotifyAuth = () => {
   const [loading, setLoading] = useState(false)
   
   // HIER deine Spotify Client ID einfügen
-  const CLIENT_ID = 'DEINE_SPOTIFY_CLIENT_ID_HIER'
+  const CLIENT_ID = '4cf1301ef9a5476c9c400158a01d17da'
   
   // Automatische URL Detection
   const getRedirectUri = () => {
     if (window.location.hostname === 'localhost') {
       return 'http://localhost:5173/callback'
     } else {
-      // Production URL - hier deine echte Vercel URL eintragen
       return `${window.location.origin}/callback`
     }
   }
@@ -28,7 +27,6 @@ export const useSpotifyAuth = () => {
     'user-top-read'
   ].join(' ')
 
-  // Rest bleibt gleich...
   const generateCodeVerifier = () => {
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
     let text = ''
@@ -75,4 +73,82 @@ export const useSpotifyAuth = () => {
     try {
       const codeVerifier = localStorage.getItem('code_verifier')
       
-      const response = await fetch('https://accounts.spotify.com/api/to
+      const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: REDIRECT_URI,
+          client_id: CLIENT_ID,
+          code_verifier: codeVerifier,
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.access_token) {
+        setAccessToken(data.access_token)
+        localStorage.setItem('spotify_access_token', data.access_token)
+        
+        await loadUserProfile(data.access_token)
+        
+        const url = new URL(window.location)
+        url.searchParams.delete('code')
+        url.searchParams.delete('state')
+        window.history.replaceState({}, document.title, url.pathname)
+      }
+    } catch (error) {
+      console.error('Spotify Auth Error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadUserProfile = async (token) => {
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      const userData = await response.json()
+      setUser(userData)
+    } catch (error) {
+      console.error('Error loading user profile:', error)
+    }
+  }
+
+  const logout = () => {
+    setAccessToken(null)
+    setUser(null)
+    localStorage.removeItem('spotify_access_token')
+    localStorage.removeItem('code_verifier')
+  }
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem('spotify_access_token')
+    if (savedToken) {
+      setAccessToken(savedToken)
+      loadUserProfile(savedToken)
+    }
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const code = urlParams.get('code')
+    if (code) {
+      handleCallback(code)
+    }
+  }, [])
+
+  return {
+    accessToken,
+    user,
+    loading,
+    login,
+    logout,
+    isAuthenticated: !!accessToken,
+    redirectUri: REDIRECT_URI
+  }
+}
