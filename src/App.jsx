@@ -1,15 +1,17 @@
-// src/App.jsx - vereinfachte Version
+// src/App.jsx
 import { useState } from 'react'
 import SongInput from './components/SongInput/SongInput'
 import SongList from './components/SetlistDisplay/SongList'
 import SetlistResult from './components/SetlistDisplay/SetlistResult'
 import SpotifyLogin from './components/SpotifyAuth/SpotifyLogin'
+import ArtistSearch from './components/SpotifyAuth/ArtistSearch'
 import { generateOptimalSetlist } from './utils/setlistGenerator'
 import { useSpotifyAuth } from './hooks/useSpotifyAuth'
 
 function App() {
   const [songs, setSongs] = useState([])
   const [setlistData, setSetlistData] = useState(null)
+  const [selectedArtist, setSelectedArtist] = useState(null)
   const { isAuthenticated } = useSpotifyAuth()
 
   const handleSongAdd = (newSong) => {
@@ -22,6 +24,13 @@ function App() {
     const result = generateOptimalSetlist(songs)
     setSetlistData(result)
     console.log('Setlist erstellt:', result)
+  }
+
+  const handleArtistSelect = (artist) => {
+    setSelectedArtist(artist)
+    setSongs([]) // Reset songs when new artist selected
+    setSetlistData(null) // Reset setlist
+    console.log('Artist selected:', artist)
   }
 
   return (
@@ -67,8 +76,58 @@ function App() {
       }}>
         <SpotifyLogin />
         
-        {isAuthenticated && (
+        {isAuthenticated && !selectedArtist && (
+          <ArtistSearch onArtistSelect={handleArtistSelect} />
+        )}
+        
+        {isAuthenticated && selectedArtist && (
           <>
+            {/* Selected Artist Info */}
+            <div style={{
+              background: '#1a1a1a',
+              border: '1px solid #2a2a2a',
+              borderRadius: '12px',
+              padding: '24px',
+              marginBottom: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              {selectedArtist.images?.[2] && (
+                <img
+                  src={selectedArtist.images[2].url}
+                  alt={selectedArtist.name}
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%'
+                  }}
+                />
+              )}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ color: '#ffffff', margin: '0 0 4px 0' }}>
+                  {selectedArtist.name}
+                </h3>
+                <p style={{ color: '#b0b0b0', margin: 0, fontSize: '14px' }}>
+                  👥 {selectedArtist.followers?.total?.toLocaleString()} Follower
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedArtist(null)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #3a3a3a',
+                  color: '#b0b0b0',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Anderen Artist wählen
+              </button>
+            </div>
+
             <SongInput onSongAdd={handleSongAdd} />
             <SongList songs={songs} onGenerateSetlist={handleGenerateSetlist} />
             {setlistData && <SetlistResult setlistData={setlistData} />}
