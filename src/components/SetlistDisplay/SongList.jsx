@@ -1,4 +1,6 @@
 // src/components/SetlistDisplay/SongList.jsx
+import { calculateSpotifyEnergyScore } from '../../utils/setlistGenerator'
+
 function SongList({ songs, onGenerateSetlist }) {
   if (songs.length === 0) {
     return (
@@ -21,14 +23,14 @@ function SongList({ songs, onGenerateSetlist }) {
           fontSize: '1.25rem',
           fontWeight: '600'
         }}>
-          Noch keine Songs hinzugefügt
+          Noch keine Songs ausgewählt
         </h3>
         <p style={{ 
           margin: 0,
           color: '#b0b0b0',
           fontSize: '14px'
         }}>
-          Füge mindestens 3 Songs hinzu, um eine Setlist zu erstellen
+          Wähle Songs aus den Alben um eine Setlist zu erstellen
         </p>
       </div>
     )
@@ -54,7 +56,7 @@ function SongList({ songs, onGenerateSetlist }) {
           fontSize: '1.5rem',
           fontWeight: '600'
         }}>
-          Deine Songs ({songs.length})
+          Ausgewählte Songs ({songs.length})
         </h3>
         
         {songs.length >= 3 && (
@@ -80,7 +82,7 @@ function SongList({ songs, onGenerateSetlist }) {
               e.target.style.boxShadow = 'none'
             }}
           >
-            Setlist erstellen
+            🎯 Setlist erstellen
           </button>
         )}
         
@@ -99,84 +101,97 @@ function SongList({ songs, onGenerateSetlist }) {
       </div>
 
       <div style={{ display: 'grid', gap: '12px' }}>
-        {songs.map((song, index) => (
-          <div 
-            key={song.id} 
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '20px',
-              background: '#2a2a2a',
-              borderRadius: '8px',
-              border: '1px solid #3a3a3a',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = '#323232'
-              e.target.style.borderColor = '#4a4a4a'
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = '#2a2a2a'
-              e.target.style.borderColor = '#3a3a3a'
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <div style={{ 
-                fontWeight: '600', 
-                fontSize: '16px', 
-                marginBottom: '4px',
-                color: '#ffffff'
-              }}>
-                {song.title}
-              </div>
-              <div style={{ 
-                color: '#b0b0b0', 
-                fontSize: '14px' 
-              }}>
-                {song.duration}
-              </div>
-            </div>
-            
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '16px' 
-            }}>
-              <div style={{ textAlign: 'right' }}>
+        {songs.map((song, index) => {
+          // Berechne korrekte Energy-Anzeige
+          const displayEnergy = song.spotifyData ? calculateSpotifyEnergyScore(song) : song.energy
+          
+          return (
+            <div 
+              key={song.id} 
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '20px',
+                background: '#2a2a2a',
+                borderRadius: '8px',
+                border: '1px solid #3a3a3a',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = '#323232'
+                e.target.style.borderColor = '#4a4a4a'
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = '#2a2a2a'
+                e.target.style.borderColor = '#3a3a3a'
+              }}
+            >
+              <div style={{ flex: 1 }}>
                 <div style={{ 
-                  fontSize: '12px', 
-                  color: '#808080', 
-                  marginBottom: '4px' 
+                  fontWeight: '600', 
+                  fontSize: '16px', 
+                  marginBottom: '4px',
+                  color: '#ffffff'
                 }}>
-                  Energy
+                  {song.title}
                 </div>
                 <div style={{ 
-                  fontWeight: '700', 
-                  fontSize: '16px',
-                  color: '#ff6b35'
+                  color: '#b0b0b0', 
+                  fontSize: '14px',
+                  display: 'flex',
+                  gap: '16px'
                 }}>
-                  {song.energy}/10
+                  <span>{song.duration}</span>
+                  {song.spotifyData?.album && (
+                    <span>📀 {song.spotifyData.album.name}</span>
+                  )}
+                  {song.spotifyData?.audioFeatures && (
+                    <span>🎵 {Math.round(song.spotifyData.audioFeatures.tempo)} BPM</span>
+                  )}
                 </div>
               </div>
-              <div style={{
-                width: '80px',
-                height: '6px',
-                background: '#3a3a3a',
-                borderRadius: '3px',
-                overflow: 'hidden'
+              
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '16px' 
               }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#808080', 
+                    marginBottom: '4px' 
+                  }}>
+                    Energy
+                  </div>
+                  <div style={{ 
+                    fontWeight: '700', 
+                    fontSize: '16px',
+                    color: '#ff6b35'
+                  }}>
+                    {displayEnergy}/10
+                  </div>
+                </div>
                 <div style={{
-                  width: `${song.energy * 10}%`,
-                  height: '100%',
-                  background: 'linear-gradient(90deg, #ff6b35 0%, #f7931e 100%)',
+                  width: '80px',
+                  height: '6px',
+                  background: '#3a3a3a',
                   borderRadius: '3px',
-                  transition: 'width 0.3s ease'
-                }}></div>
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${displayEnergy * 10}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #ff6b35 0%, #f7931e 100%)',
+                    borderRadius: '3px',
+                    transition: 'width 0.3s ease'
+                  }}></div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
