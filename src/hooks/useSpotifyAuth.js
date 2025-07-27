@@ -10,13 +10,13 @@ export const useSpotifyAuth = () => {
   const CLIENT_ID = '4cf1301ef9a5476c9c400158a01d17da'
   
   // Automatische URL Detection
-  const getRedirectUri = () => {
-    if (window.location.hostname === 'localhost') {
-      return 'http://localhost:5173/callback'
-    } else {
-      return `${window.location.origin}/callback`
-    }
+const getRedirectUri = () => {
+  if (window.location.hostname === 'localhost') {
+    return 'http://localhost:5173'  // OHNE /callback
+  } else {
+    return window.location.origin   // OHNE /callback
   }
+}
   
   const REDIRECT_URI = getRedirectUri()
   
