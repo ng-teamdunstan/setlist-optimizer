@@ -1,4 +1,3 @@
-// src/App.jsx
 import { useState } from 'react'
 import SongInput from './components/SongInput/SongInput'
 import SongList from './components/SetlistDisplay/SongList'
@@ -21,26 +20,19 @@ function App() {
   }
 
   const handleSpotifySongsSelect = (spotifyTracks) => {
-  console.log('📥 Received tracks from AlbumBrowser:', spotifyTracks)
-  
-  // Konvertiere Spotify Tracks zu unserem Song Format
-  const convertedSongs = spotifyTracks.map(track => ({
-    id: track.id,
-    title: track.name,
-    duration: track.duration,
-    energy: track.energy, // Bereits berechnet in AlbumBrowser
-    // Spotify-spezifische Daten beibehalten
-    spotifyData: track.spotifyData
-  }))
-  
-  console.log('✅ Converted songs for app:', convertedSongs)
-  setSongs(convertedSongs)
-  setSetlistData(null)
-}
+    console.log('📥 Received tracks from AlbumBrowser:', spotifyTracks)
     
+    const convertedSongs = spotifyTracks.map(track => ({
+      id: track.id,
+      title: track.name,
+      duration: track.duration,
+      energy: track.energy,
+      spotifyData: track.spotifyData
+    }))
+    
+    console.log('✅ Converted songs for app:', convertedSongs)
     setSongs(convertedSongs)
     setSetlistData(null)
-    console.log('Songs from Spotify:', convertedSongs)
   }
 
   const handleGenerateSetlist = () => {
@@ -52,8 +44,8 @@ function App() {
 
   const handleArtistSelect = (artist) => {
     setSelectedArtist(artist)
-    setSongs([]) // Reset songs when new artist selected
-    setSetlistData(null) // Reset setlist
+    setSongs([])
+    setSetlistData(null)
     console.log('Artist selected:', artist)
   }
 
@@ -106,7 +98,6 @@ function App() {
         
         {isAuthenticated && selectedArtist && songs.length === 0 && (
           <>
-            {/* Selected Artist Info */}
             <div style={{
               background: '#1a1a1a',
               border: '1px solid #2a2a2a',
@@ -161,7 +152,6 @@ function App() {
         
         {isAuthenticated && selectedArtist && songs.length > 0 && (
           <>
-            {/* Selected Artist Info mit Songs */}
             <div style={{
               background: '#1a1a1a',
               border: '1px solid #2a2a2a',
@@ -254,6 +244,6 @@ function App() {
       </footer>
     </div>
   )
-
+}
 
 export default App
