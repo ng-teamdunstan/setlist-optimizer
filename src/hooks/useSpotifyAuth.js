@@ -154,3 +154,57 @@ const SCOPES = [
     redirectUri: REDIRECT_URI
   }
 }
+
+// In useSpotifyAuth.js - füge diese Debug-Funktion hinzu:
+
+const debugTokenScopes = async (token) => {
+  try {
+    // Checke welche Scopes wir wirklich haben
+    const response = await fetch('https://api.spotify.com/v1/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (response.ok) {
+      console.log('🔑 Token ist gültig')
+      
+      // Teste Audio Features direkt
+      const testResponse = await fetch('https://api.spotify.com/v1/audio-features/4iV5W9uYEdYUVa79Axb7Rh', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      console.log('🎛️ Audio Features Test Status:', testResponse.status)
+      if (testResponse.status === 403) {
+        console.log('❌ Audio Features NICHT verfügbar (403)')
+      } else if (testResponse.ok) {
+        console.log('✅ Audio Features verfügbar!')
+        const data = await testResponse.json()
+        console.log('🎵 Sample Audio Features:', data)
+      }
+    }
+  } catch (error) {
+    console.error('Debug Error:', error)
+  }
+}
+
+// In der loadUserProfile Funktion hinzufügen:
+const loadUserProfile = async (token) => {
+  try {
+    const response = await fetch('https://api.spotify.com/v1/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    const userData = await response.json()
+    setUser(userData)
+    
+    // DEBUG: Teste Token Capabilities
+    await debugTokenScopes(token)
+    
+  } catch (error) {
+    console.error('Error loading user profile:', error)
+  }
+}
