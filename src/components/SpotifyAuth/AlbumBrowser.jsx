@@ -85,145 +85,159 @@ function AlbumBrowser({ selectedArtist, onSongsSelect }) {
     }
   }
 
-  // VERBESSERTE handleCreateSetlist Funktion mit detailliertem Debug
-  const handleCreateSetlist = async () => {
-    if (selectedTracks.length === 0) return
+  // MEHRSTUFIGE SETLIST-ERSTELLUNG mit verschiedenen Fallback-Strategien
+  // KOMPLETTE NEUE handleCreateSetlist Funktion - ersetze die alte!
+const handleCreateSetlist = async () => {
+  // === VERSION MARKER ===
+  console.log('🚀🚀🚀 NEW VERSION DEPLOYED: AlbumBrowser v2.0 🚀🚀🚀')
+  console.log('📅 Timestamp:', new Date().toISOString())
+  
+  if (selectedTracks.length === 0) return
+  
+  console.log('🚀 === STARTING SETLIST CREATION ===')
+  console.log('📝 Selected tracks:', selectedTracks.length)
+  
+  const spotifyAPI = new SpotifyAPI(accessToken)
+  const trackIds = selectedTracks.map(track => track.id)
+  
+  console.log('🎵 Track IDs to fetch:', trackIds)
+  
+  // Strategie 4: Intelligenter Fallback (springe direkt dahin wegen 403-Fehler)
+  console.log('🧠 Strategy 4: Intelligent Fallback Algorithm...')
+  console.log('🎵 Analyzing track names, durations, and metadata...')
+  
+  const tracksWithSmartEnergy = selectedTracks.map(track => {
+    let energy = 5 // Base energy
     
-    console.log('🚀 === STARTING SETLIST CREATION ===')
-    console.log('📝 Selected tracks:', selectedTracks.length)
+    const name = track.name.toLowerCase()
+    console.log(`🔍 Analyzing "${track.name}":`)
     
-    try {
-      // Audio Features für alle ausgewählten Tracks laden
-      const spotifyAPI = new SpotifyAPI(accessToken)
-      const trackIds = selectedTracks.map(track => track.id)
+    // High-Energy Keywords
+    if (name.includes('dance') || name.includes('party') || name.includes('energy') || 
+        name.includes('fire') || name.includes('power') || name.includes('rock') ||
+        name.includes('wild') || name.includes('loud') || name.includes('beat') ||
+        name.includes('pump') || name.includes('drop') || name.includes('bass')) {
+      energy += 3
+      console.log(`  ⚡ High-energy keywords found: +3 energy`)
+    }
+    
+    // Low-Energy Keywords  
+    if (name.includes('slow') || name.includes('soft') || name.includes('calm') ||
+        name.includes('acoustic') || name.includes('ballad') || name.includes('quiet') ||
+        name.includes('sad') || name.includes('lonely') || name.includes('goodbye')) {
+      energy -= 2
+      console.log(`  🌙 Low-energy keywords found: -2 energy`)
+    }
+    
+    // Duration analysis
+    const durationMinutes = track.duration_ms / 60000
+    if (durationMinutes < 2.5) {
+      energy += 1
+      console.log(`  ⏱️ Short duration (${durationMinutes.toFixed(1)}min): +1 energy`)
+    } else if (durationMinutes > 5) {
+      energy -= 1
+      console.log(`  ⏱️ Long duration (${durationMinutes.toFixed(1)}min): -1 energy`)
+    }
+    
+    // Popularity analysis
+    if (track.popularity > 70) {
+      energy += 1
+      console.log(`  🔥 High popularity (${track.popularity}%): +1 energy`)
+    } else if (track.popularity < 30) {
+      energy -= 0.5
+      console.log(`  📉 Low popularity (${track.popularity}%): -0.5 energy`)
+    }
+    
+    // Track position (opener is often strong)
+    if (track.track_number === 1) {
+      energy += 0.5
+      console.log(`  🚀 Track #1 (opener): +0.5 energy`)
+    }
+    
+    // Explicit content often more intense
+    if (track.explicit) {
+      energy += 0.5
+      console.log(`  🅴 Explicit content: +0.5 energy`)
+    }
+    
+    energy = Math.min(Math.max(Math.round(energy), 1), 10)
+    console.log(`  🎯 Final energy for "${track.name}": ${energy}/10`)
+    
+    return {
+      ...track,
+      duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
+      energy: energy,
+      spotifyData: {
+        popularity: track.popularity,
+        audioFeatures: null,
+        album: track.album,
+        artists: track.artists,
+        energySource: 'intelligent_fallback'
+      }
+    }
+  })
+  
+  console.log('🎉 SMART FALLBACK COMPLETE - Energy Summary:')
+  tracksWithSmartEnergy.forEach((track, i) => {
+    console.log(`${i + 1}. "${track.name}" - ${track.energy}/10`)
+  })
+  
+  onSongsSelect(tracksWithSmartEnergy)
+}
+
+  const processTrackDetails = (tracks, trackDetails) => {
+    return tracks.map((track, index) => {
+      const details = trackDetails[index]
+      let energy = 5
       
-      console.log('🎵 Track IDs to fetch:', trackIds)
-      
-      const audioFeaturesData = await spotifyAPI.getAudioFeatures(trackIds)
-      console.log('🎛️ Raw Audio Features Response:', audioFeaturesData)
-      
-      if (!audioFeaturesData || !audioFeaturesData.audio_features) {
-        console.error('❌ No audio features in response!')
-        throw new Error('No audio features returned')
+      // Use track details for energy estimation
+      if (details) {
+        // Duration-based
+        const durationMinutes = details.duration_ms / 60000
+        if (durationMinutes < 2.5) energy += 1
+        if (durationMinutes > 5) energy -= 1
+        
+        // Popularity-based
+        if (details.popularity > 80) energy += 2
+        else if (details.popularity > 60) energy += 1
+        else if (details.popularity < 30) energy -= 1
+        
+        energy = Math.min(Math.max(energy, 1), 10)
       }
       
-      // Tracks mit Audio Features kombinieren
-      const tracksWithFeatures = selectedTracks.map((track, index) => {
-        const audioFeatures = audioFeaturesData.audio_features[index]
-        
-        console.log(`\n🎵 Processing Track #${index + 1}: "${track.name}"`)
-        console.log('📊 Raw Audio Features:', audioFeatures)
-        
-        if (!audioFeatures) {
-          console.warn(`⚠️ No audio features for track: ${track.name}`)
-          return {
-            ...track,
-            duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
-            energy: 5, // Fallback
-            spotifyData: {
-              popularity: track.popularity,
-              audioFeatures: null,
-              album: track.album,
-              artists: track.artists
-            }
-          }
-        }
-        
-        // DETAILLIERTE Energy-Berechnung mit Logging
-        const spotifyEnergy = audioFeatures.energy || 0.5
-        const danceability = audioFeatures.danceability || 0.5
-        const tempo = audioFeatures.tempo || 120
-        const valence = audioFeatures.valence || 0.5
-        const loudness = audioFeatures.loudness || -10
-        
-        console.log(`📈 Audio Values:`, {
-          energy: spotifyEnergy,
-          danceability: danceability,
-          tempo: tempo,
-          valence: valence,
-          loudness: loudness
-        })
-        
-        // Berechnungsformel Schritt für Schritt
-        let energyScore = 0
-        
-        // Energy (40% Gewichtung)
-        const energyContrib = spotifyEnergy * 4
-        energyScore += energyContrib
-        console.log(`⚡ Energy contribution: ${spotifyEnergy} * 4 = ${energyContrib}`)
-        
-        // Danceability (30% Gewichtung)
-        const danceContrib = danceability * 3
-        energyScore += danceContrib
-        console.log(`💃 Dance contribution: ${danceability} * 3 = ${danceContrib}`)
-        
-        // Tempo (20% Gewichtung)
-        const tempoNormalized = Math.min(tempo / 140, 1)
-        const tempoContrib = tempoNormalized * 2
-        energyScore += tempoContrib
-        console.log(`🥁 Tempo contribution: ${tempo} BPM -> ${tempoNormalized} * 2 = ${tempoContrib}`)
-        
-        // Valence (10% Gewichtung)
-        const valenceContrib = valence * 1
-        energyScore += valenceContrib
-        console.log(`😊 Valence contribution: ${valence} * 1 = ${valenceContrib}`)
-        
-        console.log(`🧮 Total score before rounding: ${energyScore}`)
-        
-        // Finale Energy auf 1-10 Skala
-        const finalEnergy = Math.min(Math.max(Math.round(energyScore), 1), 10)
-        console.log(`🎯 Final Energy: ${finalEnergy}/10`)
-        
-        const result = {
-          ...track,
-          duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
-          energy: finalEnergy, // WICHTIG: Direkt als finale Energy
-          spotifyData: {
-            popularity: track.popularity,
-            audioFeatures: audioFeatures,
-            album: track.album,
-            artists: track.artists
-          }
-        }
-        
-        console.log(`✅ Final track data:`, {
-          name: result.name,
-          energy: result.energy,
-          duration: result.duration
-        })
-        
-        return result
-      })
+      console.log(`🎵 "${track.name}": Track Details Energy = ${energy}/10`)
       
-      console.log('\n🎉 === FINAL TRACKS WITH ENERGY ===')
-      tracksWithFeatures.forEach((track, i) => {
-        console.log(`${i + 1}. "${track.name}" - Energy: ${track.energy}/10`)
-      })
-      
-      onSongsSelect(tracksWithFeatures)
-      
-    } catch (error) {
-      console.error('❌ Error in handleCreateSetlist:', error)
-      
-      // Fallback ohne Audio Features
-      const fallbackTracks = selectedTracks.map(track => ({
+      return {
         ...track,
         duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
-        energy: 5, // Default energy
+        energy: energy,
         spotifyData: {
           popularity: track.popularity,
           audioFeatures: null,
           album: track.album,
-          artists: track.artists
+          artists: track.artists,
+          energySource: 'track_details'
         }
-      }))
-      
-      console.log('📝 Using fallback tracks (all energy = 5)')
-      onSongsSelect(fallbackTracks)
+      }
+    })
+  }
+
+  const createFallbackTrack = (track) => {
+    return {
+      ...track,
+      duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
+      energy: 5,
+      spotifyData: {
+        popularity: track.popularity,
+        audioFeatures: null,
+        album: track.album,
+        artists: track.artists,
+        energySource: 'fallback'
+      }
     }
   }
 
-  // Rest der Komponente bleibt gleich...
+  // Loading State
   if (loading) {
     return (
       <div style={{
@@ -242,6 +256,7 @@ function AlbumBrowser({ selectedArtist, onSongsSelect }) {
     )
   }
 
+  // Main Component Render
   return (
     <div style={{
       background: '#1a1a1a',
@@ -467,6 +482,7 @@ function AlbumBrowser({ selectedArtist, onSongsSelect }) {
                         }}>
                           {Math.floor(track.duration_ms / 60000)}:{String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
                           {track.explicit && <span> • 🅴</span>}
+                          {track.popularity && <span> • {track.popularity}% Pop</span>}
                         </div>
                       </div>
 
